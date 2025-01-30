@@ -1,0 +1,118 @@
+---
+- name: Install Go and dependencies for Trivy exporter
+  hosts: all
+  become: true
+  vars:
+    go_version: "1.21.6"
+    go_arch_map:
+      x86_64: "amd64"
+      aarch64: "arm64"
+      armv7l: "armv6l"
+    go_arch: "{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}"
+
+  tasks:
+    # Tâches communes pour tous les systèmes
+    - name: Determine system architecture
+      set_fact:
+        system_arch: "{{ ansible_architecture }}"
+
+    # Tasks pour Debian
+    - name: Install dependencies (Debian)
+      apt:
+        name: 
+          - wget
+          - git
+          - build-essential
+          - trivy
+        update_cache: yes
+        state: present
+      when: ansible_os_family == "Debian"
+
+    # Tasks pour Alpine
+    - name: Install dependencies (Alpine)
+      apk:
+        name:
+          - wget
+          - git
+          - build-base
+          - trivy
+        update_cache: yes
+        state: present
+      when: ansible_os_family == "Alpine"
+
+    # Installation de Go
+    - name: Download and extract Go (Debian/x86_64)
+      unarchive:
+        src: "https://go.dev/dl/go{{ go_version }}.linux-{{ go_arch }}.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Download and extract Go (Alpine)
+      unarchive:
+        src: "https://go.dev/dl/go{{ go_version }}.linux-{{ go_arch }}.tar.gz"
+        dest: /usr/local
+        remote_src: yes
+      when: ansible_os_family == "Alpine"
+
+    # Configuration de l'environnement Go
+    - name: Set Go environment variables
+      blockinfile:
+        path: /etc/profile.d/go.sh
+        create: yes
+        block: |
+          export GOROOT=/usr/local/go
+          export GOPATH=$HOME/go
+          export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - GO ENV"
+
+    # Création du répertoire de projet
+    - name: Create project directory
+      file:
+        path: "/opt/trivy-exporter"
+        state: directory
+        mode: '0755'
+
+    # Copie des fichiers sources
+    - name: Copy Go source files
+      copy:
+        src: "{{ item }}"
+        dest: "/opt/trivy-exporter/"
+        mode: '0644'
+      with_items:
+        - go.mod
+        - main.go
+
+    # Installation des dépendances Go
+    - name: Download Go dependencies
+      shell: |
+        source /etc/profile.d/go.sh
+        cd /opt/trivy-exporter
+        go mod download
+      args:
+        executable: /bin/bash
+
+    # Compilation du projet
+    - name: Build project
+      shell: |
+        source /etc/profile.d/go.sh
+        cd /opt/trivy-exporter
+        go build -o trivy-exporter
+      args:
+        executable: /bin/bash
+
+    # Création du service systemd (Debian)
+    - name: Create systemd service (Debian)
+      template:
+        src: trivy-exporter.service.j2
+        dest: /etc/systemd/system/trivy-exporter.service
+        mode: '0644'
+      when: ansible_os_family == "Debian"
+
+    # Création du service OpenRC (Alpine)
+    - name: Create OpenRC service (Alpine)
+      template:
+        src: trivy-exporter.openrc.j2
+        dest: /etc/init.d/trivy-exporter
+        mode: '0755'
+      when: ansible_os_family == "Alpine"

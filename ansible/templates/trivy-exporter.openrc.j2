@@ -1,0 +1,13 @@
+#!/sbin/openrc-run
+
+name="trivy-exporter"
+description="Trivy Vulnerability Exporter"
+command="/opt/trivy-exporter/trivy-exporter"
+command_background=true
+pidfile="/run/${name}.pid"
+directory="/opt/trivy-exporter"
+
+depend() {
+    need net
+    after firewall
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=Trivy Vulnerability Exporter
+After=network.target
+
+[Service]
+ExecStart=/opt/trivy-exporter/trivy-exporter
+WorkingDirectory=/opt/trivy-exporter
+User=ernix
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
