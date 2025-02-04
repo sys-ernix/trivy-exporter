@@ -113,8 +113,23 @@ func main() {
 		}
 	}()
 
-	// Boucle principale
-	for {
+	// Créer un ticker qui s'exécute toutes les 24 heures
+	ticker := time.NewTicker(24 * time.Hour)
+	defer ticker.Stop()
+
+	// Première exécution immédiate
+	log.Printf("Starting initial Trivy scan...")
+	if err := runTrivyScan(); err != nil {
+		log.Printf("Error running initial Trivy scan: %v", err)
+	}
+	if err := parseTrivyReport(); err != nil {
+		log.Printf("Error parsing initial Trivy report: %v", err)
+	}
+	log.Printf("Initial scan completed. Next scan will be in 24 hours")
+
+	// Boucle principale utilisant le ticker
+	for range ticker.C {
+		log.Printf("Starting scheduled Trivy scan...")
 		if err := runTrivyScan(); err != nil {
 			log.Printf("Error running Trivy scan: %v", err)
 		}
@@ -122,8 +137,6 @@ func main() {
 		if err := parseTrivyReport(); err != nil {
 			log.Printf("Error parsing Trivy report: %v", err)
 		}
-
-		// Attendre 24 heures avant la prochaine exécution
-		time.Sleep(24 * time.Hour)
+		log.Printf("Scan completed. Next scan will be in 24 hours")
 	}
 }
