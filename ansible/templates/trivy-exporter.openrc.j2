@@ -14,6 +14,6 @@ depend() {
 }
 
 start_pre() {
-    checkpath -f -m 644 -o root:root ${logfile}
-    checkpath -d -m 755 -o root:root ${directory}
+    checkpath -f -m 644 -o ${USER}:${USER} ${logfile}
+    checkpath -d -m 755 -o ${USER}:${USER} ${directory}
 }

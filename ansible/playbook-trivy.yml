@@ -39,7 +39,7 @@
 
     - name: Install dependencies (Debian)
       apt:
-        name: [wget, trivy]
+        name: [wget]
         update_cache: yes
       when: ansible_os_family == "Debian"
 
@@ -49,11 +49,10 @@
         update_cache: yes
       when: ansible_os_family == "Alpine"
 
-    - name: Install Trivy (Alpine)
+    - name: Install Trivy
       shell: wget -q -O - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
       args:
         creates: /usr/local/bin/trivy
-      when: ansible_os_family == "Alpine"
 
     - name: Create directories
       file:
