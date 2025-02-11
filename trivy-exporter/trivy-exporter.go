@@ -61,15 +61,21 @@ type TrivyReport struct {
 }
 
 func runTrivyScan() error {
-	log.Printf("Starting Trivy scan at %s", time.Now().Format(time.RFC3339))
-	cmd := exec.Command("trivy", "fs", "/", "--format", "json", "--output", reportPath)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return fmt.Errorf("trivy scan failed: %v\noutput: %s", err, output)
-	}
-	log.Printf("Trivy scan completed successfully. Report saved to %s", reportPath)
-	lastScanTime.Set(float64(time.Now().Unix()))
-	return nil
+    startTime := time.Now()
+    log.Printf("=== [%s] STARTING TRIVY SCAN ===", startTime.Format(time.RFC3339))
+    
+    cmd := exec.Command("trivy", "fs", "/", "--format", "json", "--output", reportPath, "--interval", "24h")
+    output, err := cmd.CombinedOutput()
+    
+    endTime := time.Now()
+    log.Printf("=== [%s] SCAN FINISHED (Duration: %v) ===", 
+        endTime.Format(time.RFC3339), 
+        endTime.Sub(startTime))
+        
+    if err != nil {
+        return fmt.Errorf("trivy scan failed: %v\noutput: %s", err, output)
+    }
+    return nil
 }
 
 func parseTrivyReport() error {
@@ -101,6 +107,14 @@ func parseTrivyReport() error {
 	}
 
 	return nil
+}
+
+func init() {
+    logFile, err := os.OpenFile("/var/log/trivy-exporter.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+    if err != nil {
+        log.Fatal(err)
+    }
+    log.SetOutput(logFile)
 }
 
 func main() {

@@ -6,8 +6,14 @@ command="/opt/trivy-exporter/trivy-exporter"
 command_background=true
 pidfile="/run/${name}.pid"
 directory="/opt/trivy-exporter"
+logfile="/var/log/trivy-exporter.log"
 
 depend() {
     need net
     after firewall
+}
+
+start_pre() {
+    checkpath -f -m 644 -o root:root ${logfile}
+    checkpath -d -m 755 -o root:root ${directory}
 }
