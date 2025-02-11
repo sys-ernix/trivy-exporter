@@ -1,129 +1,75 @@
----
-- name: Install Go and dependencies for Trivy exporter
+- name: Build Trivy exporter
+  hosts: localhost
+  connection: local
+  tasks:
+
+    - name: Download Go dependencies
+      shell: |
+        cd ../trivy-exporter
+        go mod download
+        go mod tidy
+
+    - name: Compile for AMD64
+      shell: |
+        cd ../trivy-exporter
+        GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o trivy-exporter-amd64
+      args:
+        creates: trivy-exporter-amd64
+
+    - name: Compile for ARM64
+      shell: |
+        cd ../trivy-exporter
+        GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o trivy-exporter-arm64
+      args:
+        creates: trivy-exporter-arm64
+
+- name: Deploy Trivy exporter
   hosts: all
   become: true
   vars:
-    go_version: "1.21.6"
     go_arch_map:
       x86_64: "amd64"
       aarch64: "arm64"
-      armv7l: "armv6l"
     go_arch: "{{ go_arch_map[ansible_architecture] | default(ansible_architecture) }}"
 
   tasks:
-    # Tâches communes pour tous les systèmes
     - name: Determine system architecture
       set_fact:
         system_arch: "{{ ansible_architecture }}"
 
-    # Tasks pour Debian
     - name: Install dependencies (Debian)
       apt:
-        name: 
-          - wget
-          - git
-          - build-essential
-          - trivy
+        name: [wget, trivy]
         update_cache: yes
-        state: present
       when: ansible_os_family == "Debian"
 
-    - name: Install base dependencies (Alpine)
+    - name: Install dependencies (Alpine)
       apk:
-        name:
-          - ca-certificates
-          - python3
-          - py3-requests
-          - wget
-          - git
-          - build-base
+        name: [wget]
         update_cache: yes
-        state: present
       when: ansible_os_family == "Alpine"
 
-    - name: Download and install Trivy (Alpine)
-      shell: |
-        wget -q -O - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+    - name: Install Trivy (Alpine)
+      shell: wget -q -O - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
       args:
         creates: /usr/local/bin/trivy
       when: ansible_os_family == "Alpine"
 
-    - name: Ensure Trivy has execute permissions (Alpine)
+    - name: Create directories
       file:
-        path: /usr/local/bin/trivy
-        mode: '0755'
-      when: ansible_os_family == "Alpine"
-
-    # Installation de Go
-    - name: Download and extract Go (Debian/x86_64)
-      unarchive:
-        src: "https://go.dev/dl/go{{ go_version }}.linux-{{ go_arch }}.tar.gz"
-        dest: /usr/local
-        remote_src: yes
-      when: ansible_os_family == "Debian"
-
-    - name: Download and extract Go (Alpine)
-      shell: |
-        wget -q https://go.dev/dl/go{{ go_version }}.linux-{{ go_arch }}.tar.gz -O /tmp/go.tar.gz
-        tar -C /usr/local -xzf /tmp/go.tar.gz
-        rm /tmp/go.tar.gz
-      args:
-        creates: /usr/local/go/bin/go
-      when: ansible_os_family == "Alpine"
-
-    # Configuration de l'environnement Go
-    - name: Set Go environment variables
-      blockinfile:
-        path: /etc/profile.d/go.sh
-        create: yes
-        block: |
-          export GOROOT=/usr/local/go
-          export GOPATH=$HOME/go
-          export PATH=$GOROOT/bin:$GOPATH/bin:$PATH
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - GO ENV"
-
-    # Création du répertoire de projet
-    - name: Create project directory
-      file:
-        path: "/opt/trivy-exporter"
+        path: "{{ item }}"
         state: directory
         mode: '0755'
-
-    # Copie des fichiers sources
-    - name: Copy Go source files
-      copy:
-        src: "{{ item }}"
-        dest: "/opt/trivy-exporter/"
-        mode: '0644'
       with_items:
-        - go.mod
-        - trivy-exporter.go
+        - /opt/trivy-exporter
+        - /var/log
 
-    # Installation des dépendances Go
-    - name: Download Go dependencies
-      shell: |
-        source /etc/profile.d/go.sh
-        cd /opt/trivy-exporter
-        go mod download
-        go mod tidy
-      args:
-        executable: /bin/bash
+    - name: Copy binary based on architecture
+      copy:
+        src: "trivy-exporter-{{ go_arch }}"
+        dest: /opt/trivy-exporter/trivy-exporter
+        mode: '0755'
 
-    # Compilation du projet
-    - name: Build project
-      shell: |
-        source /etc/profile.d/go.sh
-        cd /opt/trivy-exporter
-        export CGO_ENABLED=0
-        go mod tidy
-        go build -o trivy-exporter
-      args:
-        executable: /bin/bash
-      environment:
-        GOOS: linux
-        GOARCH: "{{ go_arch }}"
-
-    # Création du service systemd (Debian)
     - name: Create systemd service (Debian)
       template:
         src: trivy-exporter.service.j2
@@ -131,10 +77,9 @@
         mode: '0644'
       when: ansible_os_family == "Debian"
 
-    # Création du service OpenRC (Alpine)
     - name: Create OpenRC service (Alpine)
       template:
-        src: "trivy-exporter.openrc.j2"
+        src: trivy-exporter.openrc.j2
         dest: /etc/init.d/trivy-exporter
         mode: '0755'
       when: ansible_os_family == "Alpine"

@@ -17,7 +17,9 @@ import (
 )
 
 const (
-	reportPath   = "/tmp/report.json"
+		baseDir = "/opt/trivy-exporter"
+		reportPath = baseDir + "/report.json"
+		logPath = "/var/log/trivy-exporter.log"
 	scanInterval = 24 * time.Hour // Définition explicite de l'intervalle
 )
 
@@ -110,12 +112,15 @@ func parseTrivyReport() error {
 }
 
 func init() {
-    logFile, err := os.OpenFile("/var/log/trivy-exporter.log", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
-    if err != nil {
-        log.Fatal(err)
-    }
-    log.SetOutput(logFile)
-}
+	if err := os.MkdirAll(baseDir, 0755); err != nil {
+		log.Fatal(err)
+	}
+	logFile, err := os.OpenFile(logPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.SetOutput(logFile)
+ }
 
 func main() {
 	http.Handle("/metrics", promhttp.Handler())
