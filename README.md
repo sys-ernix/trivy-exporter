@@ -41,3 +41,41 @@ La partie ansible est présente pour faciliter le déploiement de l'exporter. La
 ```
 
 est utilise pour la compilation. Il est plutôt recommandé d'utiliser un pipeline CI/CD avec des outils comme Gitlab CI ou Jenkins que cette méthode.
+
+## Grafana PromQL
+
+Pour voir toutes les CVEs critiques avec leurs détails :
+
+```promql
+trivy_vulnerability{severity="CRITICAL"}
+```
+
+Pour voir les vulnérabilités d'un package spécifique :
+
+```promql
+trivy_vulnerability{package_name="nom_du_package"}
+```
+
+Pour compter les vulnérabilités par package :
+
+```promql
+count(trivy_vulnerability) by (package_name)
+```
+
+Pour voir les packages qui ont des vulnérabilités critiques :
+
+```promql
+count(trivy_vulnerability{severity="CRITICAL"}) by (package_name)
+```
+
+Pour voir quels packages ont le plus de vulnérabilités :
+
+```promql
+topk(10, count(trivy_vulnerability) by (package_name))
+```
+
+Pour avoir un tableau des packages vulnerables par serveurs avec les types de vulnérabilités
+
+```promql
+count by (instance, package_name, severity) (trivy_vulnerability)
+```
