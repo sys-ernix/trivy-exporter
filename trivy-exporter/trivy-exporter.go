@@ -66,7 +66,7 @@ func runTrivyScan() error {
     startTime := time.Now()
     log.Printf("=== [%s] STARTING TRIVY SCAN ===", startTime.Format(time.RFC3339))
     
-    cmd := exec.Command("trivy", "fs", "/", "--format", "json", "--output", reportPath, "--interval", "24h")
+    cmd := exec.Command("trivy", "fs", "/", "--format", "json", "--output", reportPath)
     output, err := cmd.CombinedOutput()
     
     endTime := time.Now()
