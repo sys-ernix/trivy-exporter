@@ -1,14 +1,14 @@
 # trivy-exporter
 
-Ceci est projet pour creer un exporter Prometheus pour Trivy afin d'avoir des metriques temporels pouvoir l'integrer dans un dashboard Grafana.
+Ceci est projet pour créer un exporter Prometheus pour Trivy afin d'avoir des métriques temporels pouvoir l'intégrer dans un dashboard Grafana.
 
-Dans ce dossier il y a deux parties. La partie de l'exporter en code source golang et la partie ansible pour le deploiement
+Dans ce dossier, il y a deux parties. La partie de l'exporter en code source golang et la partie ansible pour le déploiement
 
 ## trivy Exporter
 
->![Warning] Je precise que ce projet est fait pour exporter le resultat d'un scan trivy pour les CVEs. Ca a ete cree uniquement dans ce besoin precis et pour me familiarise avec le langage Golang.
+>![Warning] Je précise que ce projet est fait pour exporter le résultat d'un scan trivy pour les CVEs. Ça a été créé uniquement dans ce besoin précis et pour me familiariser avec le langage Golang.
 
-Les dependances supplementaire suivante son necessaire pour la compilation
+Les dépendances supplémentaire suivante son nécessaire pour la compilation
 
 ```golang
 	"github.com/prometheus/client_golang/prometheus"
@@ -18,7 +18,7 @@ Les dependances supplementaire suivante son necessaire pour la compilation
 
 ## Ansible
 
-La partie ansible est presente pour facilite le deploiement de l'exporter. La premiere partie du playbook
+La partie ansible est présente pour faciliter le déploiement de l'exporter. La première partie du playbook
 
 ```yaml
 - name: Build Trivy exporter
@@ -40,4 +40,4 @@ La partie ansible est presente pour facilite le deploiement de l'exporter. La pr
         creates: trivy-exporter-arm64
 ```
 
-est utilise pour la compilation. Il est plutot recommander d'utiliser un pipeline CI/CD avec des outils comme Gitlab CI ou Jenkins que cette methode.
+est utilise pour la compilation. Il est plutôt recommandé d'utiliser un pipeline CI/CD avec des outils comme Gitlab CI ou Jenkins que cette méthode.
