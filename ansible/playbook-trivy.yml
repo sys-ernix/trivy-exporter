@@ -24,7 +24,7 @@
         creates: trivy-exporter-arm64
 
 - name: Deploy Trivy exporter
-  hosts: all
+  hosts: Debian:RPI:Alpine
   become: true
   vars:
     go_arch_map:
@@ -50,7 +50,7 @@
       when: ansible_os_family == "Alpine"
 
     - name: Install Trivy
-      shell: wget -q -O - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+      shell: cd /usr/local/ && wget -q -O - https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh
       args:
         creates: /usr/local/bin/trivy
 
@@ -65,7 +65,7 @@
 
     - name: Copy binary based on architecture
       copy:
-        src: "trivy-exporter-{{ go_arch }}"
+        src: "../trivy-exporter/trivy-exporter-{{ go_arch }}"
         dest: /opt/trivy-exporter/trivy-exporter
         mode: '0755'
 
@@ -81,4 +81,23 @@
         src: trivy-exporter.openrc.j2
         dest: /etc/init.d/trivy-exporter
         mode: '0755'
+      when: ansible_os_family == "Alpine"
+
+    - name: Start and enable trivy-exporter service (Debian)
+      systemd:
+        name: trivy-exporter
+        state: started
+        enabled: yes
+        daemon_reload: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable trivy-exporter service (Alpine)
+      service:
+        name: trivy-exporter
+        state: started
+        runlevel: default
+      when: ansible_os_family == "Alpine"
+
+    - name: Enable trivy-exporter service on boot (Alpine)
+      command: rc-update add trivy-exporter default
       when: ansible_os_family == "Alpine"

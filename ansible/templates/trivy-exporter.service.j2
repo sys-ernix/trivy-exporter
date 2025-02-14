@@ -5,10 +5,10 @@ After=network.target
 [Service]
 ExecStart=/opt/trivy-exporter/trivy-exporter
 WorkingDirectory=/opt/trivy-exporter
-User=$USER
+User=root
 Restart=always
-StandardOutput=append:/var/log/trivy-exporter.log
-StandardError=append:/var/log/trivy-exporter.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
